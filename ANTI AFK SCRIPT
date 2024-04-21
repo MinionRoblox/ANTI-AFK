@@ -70,11 +70,11 @@ local function handleInput(input, isProcessed)
 end
 
 -- Подписываемся на события нажатия и отпускания клавиш
-UserInputService.InputBegan:Connect(handleInput)
+UserInputService.InputBegan:Connect(function(input)
+    handleInput(input, false)
+end)
 UserInputService.InputEnded:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.A or input.KeyCode == Enum.KeyCode.D then
-        angularSpeed = math.rad(90) -- Сброс скорости поворота при отпускании клавиш
-    end
+    handleInput(input, true)
 end)
 
 -- Функция для обновления GUI
@@ -116,6 +116,34 @@ local function updateGui()
     resetButton.Parent = frame
     resetButton.MouseButton1Click:Connect(function()
         afkTimer = 0
+    end)
+end
+
+-- Создаем кнопки управления
+local buttons = {
+    {KeyCode = Enum.KeyCode.W, Text = "W"},
+    {KeyCode = Enum.KeyCode.A, Text = "A"},
+    {KeyCode = Enum.KeyCode.S, Text = "S"},
+    {KeyCode = Enum.KeyCode.D, Text = "D"}
+}
+
+for i, buttonData in ipairs(buttons) do
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0.2, 0, 0.2, 0)
+    button.Position = UDim2.new((i - 1) * 0.25, 0, 0.7, 0)
+    button.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+    button.BorderSizePixel = 0
+    button.Text = buttonData.Text
+    button.Font = Enum.Font.SourceSans
+    button.TextSize = 20
+    button.Parent = frame
+
+    -- Добавляем функционал кнопкам
+    button.MouseButton1Down:Connect(function()
+        handleInput({KeyCode = buttonData.KeyCode}, false)
+    end)
+    button.MouseButton1Up:Connect(function()
+        handleInput({KeyCode = buttonData.KeyCode}, true)
     end)
 end
 
