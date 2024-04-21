@@ -2,7 +2,6 @@ local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local rootPart = character.PrimaryPart or character:WaitForChild("HumanoidRootPart")
 
-local circleCenter = Vector3.new(0, 0, 0)
 local circleRadius = 10
 local angle = 0
 local angularSpeed = math.rad(90)
@@ -36,6 +35,7 @@ end)
 -- Перемещение персонажа по кругу
 while true do
     if walking then
+        local circleCenter = rootPart.Position + Vector3.new(0, -3, 0) -- Поднимаем на некоторую высоту, чтобы не застревать под землей
         local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
         rootPart.CFrame = CFrame.new(circleCenter + direction * circleRadius)
         angle = angle + angularSpeed * wait()
