@@ -1,0 +1,136 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+
+-- Создаем GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 200, 0, 150)
+frame.Position = UDim2.new(0.5, -100, 0.5, -75)
+frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+frame.BorderSizePixel = 2
+frame.BorderColor3 = Color3.fromRGB(0, 0, 0)
+frame.Parent = screenGui
+
+local walkingEnabled = false
+local afkTimer = 0
+local afkTimeThreshold = 60 -- Пороговое значение для считывания AFK (в секундах)
+local afkTimerRunning = false
+local afkCheckDelay = 1
+
+local circleRadius = 10
+local circleCenter = Vector3.new(0, 0, 0)
+local angle = 0
+local angularSpeed = math.rad(90)
+
+local function startAfkTimer()
+    afkTimerRunning = true
+    while afkTimerRunning do
+        afkTimer = afkTimer + afkCheckDelay
+        wait(afkCheckDelay)
+    end
+end
+
+local function stopAfkTimer()
+    afkTimerRunning = false
+end
+
+local function updateMovement()
+    local character = player.Character
+    if character and walkingEnabled then
+        local rootPart = character.PrimaryPart or character:WaitForChild("HumanoidRootPart")
+        local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
+        rootPart.CFrame = CFrame.new(circleCenter + direction * circleRadius)
+        angle = angle + angularSpeed * RunService.RenderStepped:Wait()
+    end
+end
+
+-- Функция для отключения/включения ходьбы по кругу
+local function toggleWalking()
+    walkingEnabled = not walkingEnabled
+end
+
+-- Функция для обработки пользовательского ввода
+local function handleInput(input, isProcessed)
+    if not isProcessed then
+        if input.KeyCode == Enum.KeyCode.W then
+            toggleWalking()
+        elseif input.KeyCode == Enum.KeyCode.A then
+            angularSpeed = -math.rad(90) -- Поворот против часовой стрелки
+        elseif input.KeyCode == Enum.KeyCode.S then
+            stopAfkTimer()
+        elseif input.KeyCode == Enum.KeyCode.D then
+            angularSpeed = math.rad(90) -- Поворот по часовой стрелке
+        end
+    end
+end
+
+-- Подписываемся на события нажатия и отпускания клавиш
+UserInputService.InputBegan:Connect(handleInput)
+UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.A or input.KeyCode == Enum.KeyCode.D then
+        angularSpeed = math.rad(90) -- Сброс скорости поворота при отпускании клавиш
+    end
+end)
+
+-- Функция для обновления GUI
+local function updateGui()
+    frame:ClearAllChildren()
+
+    -- Кнопка включения/выключения ходьбы по кругу
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Size = UDim2.new(0.5, 0, 0.2, 0)
+    toggleButton.Position = UDim2.new(0, 0, 0, 0)
+    toggleButton.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+    toggleButton.BorderSizePixel = 0
+    toggleButton.Text = walkingEnabled and "Выключить ходьбу" or "Включить ходьбу"
+    toggleButton.Font = Enum.Font.SourceSans
+    toggleButton.TextSize = 20
+    toggleButton.Parent = frame
+    toggleButton.MouseButton1Click:Connect(toggleWalking)
+
+    -- Счетчик времени AFK
+    local afkTimerLabel = Instance.new("TextLabel")
+    afkTimerLabel.Size = UDim2.new(0.5, 0, 0.2, 0)
+    afkTimerLabel.Position = UDim2.new(0, 0, 0.2, 0)
+    afkTimerLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    afkTimerLabel.BorderSizePixel = 0
+    afkTimerLabel.Text = string.format("Время AFK: %d сек", afkTimer)
+    afkTimerLabel.Font = Enum.Font.SourceSans
+    afkTimerLabel.TextSize = 20
+    afkTimerLabel.Parent = frame
+
+    -- Кнопка сброса счетчика времени
+    local resetButton = Instance.new("TextButton")
+    resetButton.Size = UDim2.new(0.5, 0, 0.2, 0)
+    resetButton.Position = UDim2.new(0, 0, 0.4, 0)
+    resetButton.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+    resetButton.BorderSizePixel = 0
+    resetButton.Text = "Сбросить счетчик"
+    resetButton.Font = Enum.Font.SourceSans
+    resetButton.TextSize = 20
+    resetButton.Parent = frame
+    resetButton.MouseButton1Click:Connect(function()
+        afkTimer = 0
+    end)
+end
+
+-- Запускаем таймер AFK при загрузке игры
+startAfkTimer()
+
+-- Проверяем время AFK и обновляем GUI
+spawn(function()
+    while true do
+        updateGui()
+        if afkTimer >= afkTimeThreshold then
+            walkingEnabled = false
+            afkTimer = 0 -- Сбрасываем таймер, чтобы избежать непрерывного выполнения действий
+        end
+        updateMovement()
+        wait(afkCheckDelay)
+    end
+end)
